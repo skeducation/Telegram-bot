@@ -1,3 +1,5 @@
 {
-  "functions": { "api/webhook.js": { "maxDuration": 60 } }
+  "crons": [
+    { "path": "/api/cron", "schedule": "* * * * *" }
+  ]
 }
