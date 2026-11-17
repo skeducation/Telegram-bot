@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SK Education · Admin Account Setup</title>
+<style>
+:root{color-scheme:dark;--bg:#080d18;--card:#111b2d;--line:#263650;--blue:#4d8dff;--muted:#a9b8ce}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 20% 10%,#142b50 0,transparent 38%),var(--bg);font:15px system-ui;color:#eef4ff}
+.card{width:min(100%,430px);background:#101a2bed;border:1px solid var(--line);border-radius:22px;padding:25px;box-shadow:0 22px 70px #0008}
+.brand{font-size:12px;letter-spacing:2px;color:#8fb8ff;font-weight:800}.title{font-size:27px;margin:8px 0 5px}.sub{color:var(--muted);line-height:1.5;margin:0 0 22px}
+.tabs{display:flex;background:#091222;padding:4px;border-radius:12px;margin-bottom:18px}.tabs button{flex:1;border:0;background:transparent;color:#b9c7da;padding:11px;border-radius:9px;font-weight:700}.tabs button.active{background:#20395f;color:white}
+label{display:block;margin:14px 0 7px;color:#d5e2f5;font-size:13px}input{width:100%;padding:14px;border-radius:11px;border:1px solid #344966;background:#091323;color:white;outline:none}input:focus{border-color:var(--blue)}
+.primary{width:100%;border:0;border-radius:11px;padding:14px;background:linear-gradient(100deg,#3679f6,#5b9cff);color:white;font-weight:800;margin-top:20px}.hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:15px}.status{margin-top:15px;padding:12px;border-radius:10px;background:#0a1424;color:#d8e7ff;white-space:pre-wrap;overflow-wrap:anywhere}.hidden{display:none!important}.uid{font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere}.warn{color:#ffd58b}.success{color:#8ff0ba}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">SK EDUCATION</div>
+  <h1 class="title">Admin account</h1>
+  <p class="sub">Create or sign in to your Firebase email account. This page uses the existing Firebase project and does not change your database content.</p>
+  <div class="tabs"><button id="createTab" class="active" type="button">Create account</button><button id="loginTab" type="button">Login</button></div>
+  <form id="authForm">
+    <label for="email">Gmail / Email</label><input id="email" type="email" autocomplete="email" placeholder="you@gmail.com" required>
+    <label for="password">Password</label><input id="password" type="password" autocomplete="new-password" minlength="6" placeholder="At least 6 characters" required>
+    <button id="submitBtn" class="primary" type="submit">Create Firebase account</button>
+  </form>
+  <div id="result" class="status hidden" aria-live="polite"></div>
+  <p class="hint"><span class="warn">Important:</span> Creating an account does not automatically grant admin access. After account creation, copy the UID shown here. The app's <b>ADMIN_UID</b> must be updated to that UID by the Firebase project owner. If Realtime Database already has <b>/admin/uid</b> locked to another UID, the owner must update that lock too. Never publish this setup page as an open public admin-registration page.</p>
+</main>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+
+// Existing Firebase project configuration from the supplied Study Helper APK.
+const firebaseConfig = {
+  apiKey: 'AIzaSyDaUpMYj_NlGghHLrijP58Zs6wh2b45k7c',
+  authDomain: 'krishnachaurasiaaaa.firebaseapp.com',
+  databaseURL: 'https://krishnachaurasiaaaa-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId: 'krishnachaurasiaaaa',
+  storageBucket: 'krishnachaurasiaaaa.firebasestorage.app',
+  messagingSenderId: '897089652415',
+  appId: '1:897089652415:web:caafe697dc04d3e899e80a',
+  measurementId: 'G-Q2J35TR2VL'
+};
+const auth = getAuth(initializeApp(firebaseConfig));
+let mode = 'create';
+const $ = id => document.getElementById(id);
+function setMode(next){mode=next;$('createTab').classList.toggle('active',mode==='create');$('loginTab').classList.toggle('active',mode==='login');$('submitBtn').textContent=mode==='create'?'Create Firebase account':'Sign in';$('password').autocomplete=mode==='create'?'new-password':'current-password';$('result').classList.add('hidden');}
+$('createTab').addEventListener('click',()=>setMode('create'));
+$('loginTab').addEventListener('click',()=>setMode('login'));
+function show(message,kind=''){const box=$('result');box.textContent=message;box.classList.remove('hidden');box.className='status '+kind;}
+$('authForm').addEventListener('submit',async e=>{
+ e.preventDefault();const email=$('email').value.trim();const password=$('password').value;
+ $('submitBtn').disabled=true;$('submitBtn').textContent='Please wait…';
+ try{
+  let credential;
+  if(mode==='create'){
+   credential=await createUserWithEmailAndPassword(auth,email,password);
+   let verification='';try{await sendEmailVerification(credential.user);verification='\nVerification email sent. Check your inbox.';}catch(_){verification='\nEmail verification could not be sent right now.';}
+   show('Firebase account created.\nEmail: '+credential.user.email+'\nUID: '+credential.user.uid+verification+'\n\nCopy this UID and have the Firebase project owner update ADMIN_UID in the app config. This page has NOT granted admin privileges.','success');
+  }else{
+   credential=await signInWithEmailAndPassword(auth,email,password);
+   show('Signed in successfully.\nEmail: '+credential.user.email+'\nUID: '+credential.user.uid+'\n\nIf this UID is not configured as ADMIN_UID (and /admin/uid where applicable), the app will not treat this account as admin.','success');
+  }
+ }catch(err){const messages={ 'auth/email-already-in-use':'This email already has an account. Use Login.', 'auth/weak-password':'Use a password with at least 6 characters.', 'auth/invalid-email':'Enter a valid email address.', 'auth/invalid-credential':'Email or password is incorrect.', 'auth/operation-not-allowed':'Enable Email/Password provider in Firebase Authentication settings.', 'auth/network-request-failed':'Network error. Check your internet connection.'};show(messages[err.code]||('Firebase error: '+err.code+' — '+err.message),'warn');}
+ finally{$('submitBtn').disabled=false;$('submitBtn').textContent=mode==='create'?'Create Firebase account':'Sign in';}
+});
+</script>
+</body>
+</html>
